@@ -81,7 +81,7 @@ rodio = { version = "0.21", optional = true, default-features = false, features 
 ] }
 
 # Container and audio decoder
-symphonia = { version = "0.5", default-features = false, features = [
+symphonia = { version = "0.6", default-features = false, features = [
     "mp3",
     "ogg",
     "vorbis",
@@ -97,3 +97,7 @@ rand_distr = "0.5"
 
 # Local file handling
 form_urlencoded = "1.2.2"
+
+[dev-dependencies]
+# Exercise the Symphonia 0.6 decoder with a tiny in-memory PCM container.
+symphonia = { version = "0.6", default-features = false, features = ["wav", "pcm"] }

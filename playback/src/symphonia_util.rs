@@ -1,18 +1,9 @@
+use symphonia::core::formats::FormatReader;
 use symphonia::core::meta::Metadata;
-use symphonia::core::probe::ProbeResult;
 
-pub fn get_latest_metadata(probe_result: &mut ProbeResult) -> Option<Metadata<'_>> {
-    let mut metadata = probe_result.format.metadata();
-
-    // If we can't get metadata from the container, fall back to other tags found by probing.
-    // Note that this is only relevant for local files.
-    if metadata.current().is_none() {
-        if let Some(inner_probe_metadata) = probe_result.metadata.get() {
-            metadata = inner_probe_metadata;
-        }
-    }
-
-    _ = metadata.skip_to_latest();
-
+pub fn get_latest_metadata(format: &mut dyn FormatReader) -> Option<Metadata<'_>> {
+    // Symphonia 0.6 queues probe metadata directly on the format reader.
+    let mut metadata = format.metadata();
+    metadata.skip_to_latest()?;
     Some(metadata)
 }

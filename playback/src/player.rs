@@ -37,7 +37,7 @@ use futures_util::{
 use librespot_metadata::{audio::UniqueFields, track::Tracks};
 
 use symphonia::core::io::MediaSource;
-use symphonia::core::probe::Hint;
+use symphonia::core::formats::probe::Hint;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::SAMPLES_PER_SECOND;

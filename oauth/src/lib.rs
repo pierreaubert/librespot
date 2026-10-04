@@ -28,6 +28,8 @@ use log::{error, info, trace};
 use thiserror::Error;
 use url::Url;
 
+mod http_client;
+
 // TLS Feature Validation
 //
 // These compile-time checks are placed in the oauth crate rather than core for a specific reason:
@@ -298,7 +300,7 @@ impl OAuthClient {
             let resp = client
                 .exchange_code(code)
                 .set_pkce_verifier(pkce_verifier)
-                .request(&http_client);
+                .request(&|request| http_client::blocking(&http_client, request));
             if let Err(e) = tx.send(resp) {
                 error!("OAuth channel send error: {e}");
             }
@@ -317,7 +319,7 @@ impl OAuthClient {
         let resp = self
             .client
             .exchange_refresh_token(&refresh_token)
-            .request(&http_client);
+            .request(&|request| http_client::blocking(&http_client, request));
 
         let resp = resp.map_err(|e| OAuthError::ExchangeCode { e: e.to_string() })?;
         self.build_token(resp)
@@ -338,7 +340,7 @@ impl OAuthClient {
             .client
             .exchange_code(code)
             .set_pkce_verifier(pkce_verifier)
-            .request_async(&http_client)
+            .request_async(&|request| http_client::asynchronous(&http_client, request))
             .await;
 
         let resp = resp.map_err(|e| OAuthError::ExchangeCode { e: e.to_string() })?;
@@ -352,7 +354,7 @@ impl OAuthClient {
         let resp = self
             .client
             .exchange_refresh_token(&refresh_token)
-            .request_async(&http_client)
+            .request_async(&|request| http_client::asynchronous(&http_client, request))
             .await;
 
         let resp = resp.map_err(|e| OAuthError::ExchangeCode { e: e.to_string() })?;
@@ -482,7 +484,7 @@ pub fn get_access_token(
         let resp = client
             .exchange_code(code)
             .set_pkce_verifier(pkce_verifier)
-            .request(&http_client);
+            .request(&|request| http_client::blocking(&http_client, request));
         if let Err(e) = tx.send(resp) {
             error!("OAuth channel send error: {e}");
         }

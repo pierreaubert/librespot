@@ -1,4 +1,3 @@
-use rand::SeedableRng;
 use rand::rngs::SmallRng;
 use rand_distr::{Distribution, Normal, Triangular, Uniform};
 use std::fmt;
@@ -43,7 +42,7 @@ impl fmt::Display for dyn Ditherer {
 }
 
 fn create_rng() -> SmallRng {
-    SmallRng::from_os_rng()
+    rand::make_rng()
 }
 
 pub struct TriangularDitherer {
@@ -158,5 +157,70 @@ pub fn find_ditherer(name: Option<String>) -> Option<DithererBuilder> {
         Some(GaussianDitherer::NAME) => Some(mk_ditherer::<GaussianDitherer>),
         Some(HighPassDitherer::NAME) => Some(mk_ditherer::<HighPassDitherer>),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::SeedableRng;
+
+    fn moments<D: Ditherer>(ditherer: &mut D) -> (f64, f64) {
+        const SAMPLES: usize = 100_000;
+        let (mut sum, mut squares) = (0.0, 0.0);
+        for _ in 0..SAMPLES {
+            let noise = ditherer.noise();
+            assert!(noise.is_finite());
+            sum += noise;
+            squares += noise * noise;
+        }
+        (sum / SAMPLES as f64, squares / SAMPLES as f64)
+    }
+
+    #[test]
+    fn seeded_dither_distributions_preserve_zero_mean_and_variance() {
+        let mut triangular = TriangularDitherer::new();
+        triangular.cached_rng = SmallRng::seed_from_u64(17);
+        let (mean, second_moment) = moments(&mut triangular);
+        assert!(mean.abs() < 0.02);
+        assert!((second_moment - 1.0 / 6.0).abs() < 0.02);
+
+        let mut gaussian = GaussianDitherer::new();
+        gaussian.cached_rng = SmallRng::seed_from_u64(17);
+        let (mean, second_moment) = moments(&mut gaussian);
+        assert!(mean.abs() < 0.02);
+        assert!((second_moment - 0.6_f64.powi(2)).abs() < 0.03);
+
+        let mut high_pass = HighPassDitherer::new();
+        high_pass.cached_rng = SmallRng::seed_from_u64(17);
+        let (mean, second_moment) = moments(&mut high_pass);
+        assert!(mean.abs() < 0.02);
+        assert!((second_moment - 1.0 / 6.0).abs() < 0.03);
+    }
+
+    #[test]
+    fn high_pass_dither_keeps_independent_channel_histories() {
+        let mut ditherer = HighPassDitherer::new();
+        ditherer.cached_rng = SmallRng::seed_from_u64(29);
+        let mut reference_rng = SmallRng::seed_from_u64(29);
+        let distribution = Uniform::new_inclusive(-0.5, 0.5).unwrap();
+        let samples: Vec<f64> = (0..4)
+            .map(|_| distribution.sample(&mut reference_rng))
+            .collect();
+        assert_eq!(ditherer.noise(), samples[0]);
+        assert_eq!(ditherer.noise(), samples[1]);
+        assert_eq!(ditherer.noise(), samples[2] - samples[0]);
+        assert_eq!(ditherer.noise(), samples[3] - samples[1]);
+    }
+
+    #[test]
+    fn seeded_dither_replay_is_bit_identical() {
+        let mut first = TriangularDitherer::new();
+        let mut replay = TriangularDitherer::new();
+        first.cached_rng = SmallRng::seed_from_u64(71);
+        replay.cached_rng = SmallRng::seed_from_u64(71);
+        for _ in 0..4096 {
+            assert_eq!(first.noise().to_bits(), replay.noise().to_bits());
+        }
     }
 }

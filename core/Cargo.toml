@@ -92,7 +92,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha1 = { version = "0.10", features = ["oid"] }
 shannon = "0.2"
-sysinfo = { version = "0.36", default-features = false, features = ["system"] }
+sysinfo = { version = "0.31.4", default-features = false, features = ["system"] }
 thiserror = "2"
 time = { version = "0.3", features = ["formatting", "parsing"] }
 tokio = { version = "1", features = [
@@ -111,7 +111,6 @@ uuid = { version = "1", default-features = false, features = ["v4"] }
 
 [build-dependencies]
 rand = { version = "0.9", default-features = false, features = ["thread_rng"] }
-rand_distr = "0.5"
 vergen-gitcl = { version = "1.0", default-features = false, features = [
     "build",
 ] }

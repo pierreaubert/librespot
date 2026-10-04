@@ -77,7 +77,7 @@ impl SymphoniaDecoder {
             )));
         }
 
-        let channels = decoder.codec_params().channels.ok_or_else(|| {
+        let channels = decoder.codec_params().channels.as_ref().ok_or_else(|| {
             DecoderError::SymphoniaDecoder("Could not retrieve channel configuration".into())
         })?;
         if channels.count() != NUM_CHANNELS as usize {

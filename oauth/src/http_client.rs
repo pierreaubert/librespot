@@ -4,7 +4,7 @@ use oauth2::{HttpRequest, HttpResponse};
 
 #[cfg(feature = "rustls-tls-webpki-roots")]
 fn webpki_tls_config() -> rustls::ClientConfig {
-    let roots = webpki_roots::TLS_SERVER_ROOTS.iter().cloned().collect();
+    let roots: rustls::RootCertStore = webpki_roots::TLS_SERVER_ROOTS.iter().cloned().collect();
     rustls::ClientConfig::builder_with_provider(std::sync::Arc::new(
         rustls::crypto::aws_lc_rs::default_provider(),
     ))

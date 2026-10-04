@@ -1,5 +1,5 @@
 use rand::Rng;
-use rand_distr::Alphanumeric;
+use rand::distr::Alphanumeric;
 use vergen_gitcl::{BuildBuilder, Emitter, GitclBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

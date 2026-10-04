@@ -16,11 +16,13 @@ default = ["native-tls"]
 native-tls = ["reqwest/native-tls"]
 rustls-tls-native-roots = [
     "__rustls",
-    "reqwest/rustls-tls-native-roots",
+    "reqwest/rustls",
 ]
 rustls-tls-webpki-roots = [
     "__rustls",
-    "reqwest/rustls-tls-webpki-roots",
+    "reqwest/rustls",
+    "dep:rustls",
+    "dep:webpki-roots",
 ]
 
 # Internal features - these are not meant to be used by end users
@@ -33,6 +35,8 @@ open = "5.3"
 reqwest = { version = "0.13", default-features = false, features = [
     "blocking", "system-proxy",
 ] }
+rustls = { version = "0.23", optional = true, default-features = false, features = ["aws_lc_rs", "std"] }
+webpki-roots = { version = "1", optional = true }
 http = "1"
 thiserror = "2"
 url = "2.5"

@@ -296,11 +296,14 @@ impl OAuthClient {
         let (tx, rx) = mpsc::channel();
         let client = self.client.clone();
         std::thread::spawn(move || {
-            let http_client = reqwest::blocking::Client::new();
-            let resp = client
-                .exchange_code(code)
-                .set_pkce_verifier(pkce_verifier)
-                .request(&|request| http_client::blocking(&http_client, request));
+            let resp = match http_client::blocking_client() {
+                Ok(http_client) => client
+                    .exchange_code(code)
+                    .set_pkce_verifier(pkce_verifier)
+                    .request(&|request| http_client::blocking(&http_client, request))
+                    .map_err(|error| error.to_string()),
+                Err(error) => Err(error.to_string()),
+            };
             if let Err(e) = tx.send(resp) {
                 error!("OAuth channel send error: {e}");
             }
@@ -315,7 +318,8 @@ impl OAuthClient {
     /// Synchronously obtain a new valid OAuth token from `refresh_token`
     pub fn refresh_token(&self, refresh_token: &str) -> Result<OAuthToken, OAuthError> {
         let refresh_token = RefreshToken::new(refresh_token.to_string());
-        let http_client = reqwest::blocking::Client::new();
+        let http_client = http_client::blocking_client()
+            .map_err(|e| OAuthError::ExchangeCode { e: e.to_string() })?;
         let resp = self
             .client
             .exchange_refresh_token(&refresh_token)
@@ -335,7 +339,8 @@ impl OAuthClient {
         }?;
         trace!("Exchange {code:?} for access token");
 
-        let http_client = reqwest::Client::new();
+        let http_client = http_client::asynchronous_client()
+            .map_err(|e| OAuthError::ExchangeCode { e: e.to_string() })?;
         let resp = self
             .client
             .exchange_code(code)
@@ -350,7 +355,8 @@ impl OAuthClient {
     /// Asynchronously obtain a new valid OAuth token from `refresh_token`
     pub async fn refresh_token_async(&self, refresh_token: &str) -> Result<OAuthToken, OAuthError> {
         let refresh_token = RefreshToken::new(refresh_token.to_string());
-        let http_client = reqwest::Client::new();
+        let http_client = http_client::asynchronous_client()
+            .map_err(|e| OAuthError::ExchangeCode { e: e.to_string() })?;
         let resp = self
             .client
             .exchange_refresh_token(&refresh_token)
@@ -480,11 +486,14 @@ pub fn get_access_token(
     // Do this sync in another thread because I am too stupid to make the async version work.
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
-        let http_client = reqwest::blocking::Client::new();
-        let resp = client
-            .exchange_code(code)
-            .set_pkce_verifier(pkce_verifier)
-            .request(&|request| http_client::blocking(&http_client, request));
+        let resp = match http_client::blocking_client() {
+            Ok(http_client) => client
+                .exchange_code(code)
+                .set_pkce_verifier(pkce_verifier)
+                .request(&|request| http_client::blocking(&http_client, request))
+                .map_err(|error| error.to_string()),
+            Err(error) => Err(error.to_string()),
+        };
         if let Err(e) = tx.send(resp) {
             error!("OAuth channel send error: {e}");
         }

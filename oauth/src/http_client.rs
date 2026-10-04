@@ -2,6 +2,32 @@
 
 use oauth2::{HttpRequest, HttpResponse};
 
+#[cfg(feature = "rustls-tls-webpki-roots")]
+fn webpki_tls_config() -> rustls::ClientConfig {
+    let roots = webpki_roots::TLS_SERVER_ROOTS.iter().cloned().collect();
+    rustls::ClientConfig::builder_with_provider(std::sync::Arc::new(
+        rustls::crypto::aws_lc_rs::default_provider(),
+    ))
+        .with_safe_default_protocol_versions()
+        .expect("AWS-LC supports the safe TLS protocol versions")
+        .with_root_certificates(roots)
+        .with_no_client_auth()
+}
+
+pub(super) fn blocking_client() -> Result<reqwest::blocking::Client, reqwest::Error> {
+    let builder = reqwest::blocking::Client::builder();
+    #[cfg(feature = "rustls-tls-webpki-roots")]
+    let builder = builder.tls_backend_preconfigured(webpki_tls_config());
+    builder.build()
+}
+
+pub(super) fn asynchronous_client() -> Result<reqwest::Client, reqwest::Error> {
+    let builder = reqwest::Client::builder();
+    #[cfg(feature = "rustls-tls-webpki-roots")]
+    let builder = builder.tls_backend_preconfigured(webpki_tls_config());
+    builder.build()
+}
+
 pub(super) fn blocking(
     client: &reqwest::blocking::Client,
     request: HttpRequest,
@@ -44,6 +70,14 @@ mod tests {
     use super::*;
     use std::io::{Read, Write};
     use std::net::TcpListener;
+
+    #[test]
+    fn selected_tls_backend_builds_blocking_and_async_clients() {
+        blocking_client().expect("configured blocking OAuth client");
+        asynchronous_client().expect("configured async OAuth client");
+        #[cfg(feature = "rustls-tls-webpki-roots")]
+        assert!(!webpki_roots::TLS_SERVER_ROOTS.is_empty());
+    }
 
     fn mock_token_endpoint() -> (String, std::thread::JoinHandle<Vec<u8>>) {
         let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind mock OAuth endpoint");
